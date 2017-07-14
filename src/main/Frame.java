@@ -5,6 +5,8 @@ import java.util.List;
 
 /**
  * Encapsulates the score for a single frame within the game.
+ * 
+ * @author Roger Delacruz
  */
 public class Frame  {
 
@@ -93,11 +95,17 @@ public class Frame  {
 	 * Updates the list of points.
 	 * 
 	 * @param num - Number of pins knocked down, which will be used to update the list.
+	 * @throws IllegalStateException The number of possible pins that can be knocked down
+	 * has been exceeded.
 	 */
-	public void updateScore(int num) {
+	public void updateScore(int num) throws IllegalStateException {
 		points.add(num);
-		if (points.size() >= 2)
+		if (points.size() >= 2) {
+			if (points.get(0) + points.get(1) > NUM_OF_PINS)
+				throw new IllegalStateException("Only " + NUM_OF_PINS 
+						+ " pins can be knocked down in a single frame.");
 			status = Status.COMPLETE;
+		}
 	}
 	
 	/**

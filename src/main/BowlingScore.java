@@ -53,8 +53,10 @@ public class BowlingScore {
 	 * Processes number and updates frames accordingly.
 	 * 
 	 * @param number - Number of pins knocked down.
+	 * @throws IllegalStateException The number of possible pins that can be knocked 
+	 * down has been exceeded.
 	 */
-	public void processNumber(int number) {
+	public void processNumber(int number) throws IllegalStateException {
 		updateFrames();
 		
 		// Processes the number of pins knocked down within the current frame
@@ -75,8 +77,11 @@ public class BowlingScore {
 	
 	/**
 	 * Processes spare and updates frames accordingly.
+	 * 
+	 * @throws IllegalStateException Spare can only be performed on a frame with 
+	 * one roll.
 	 */
-	public void processSpare() {
+	public void processSpare() throws IllegalStateException {
 		updateFrames();
 		
 		// Processes spare within the current frame
@@ -86,8 +91,10 @@ public class BowlingScore {
 	
 	/**
 	 * Processes strike and updates frames accordingly.
+	 * 
+	 * @throws IllegalStateException Strike can only be performed on empty frame.
 	 */
-	public void processStrike() {
+	public void processStrike() throws IllegalStateException {
 		updateFrames();
 		
 		// Processes strike within the current frame
