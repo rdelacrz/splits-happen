@@ -15,7 +15,7 @@ import main.Frame.FinalFrame;
 public class BowlingScore {
 	
 	/** Maximum number of frames in a game. **/
-	private static int MAX_FRAMES = 10;
+	private static final int MAX_FRAMES = 10;
 	
 	/* Constants should be place before this line */
 	
@@ -41,9 +41,8 @@ public class BowlingScore {
 	 */
 	private void updateFrames() {
 		Frame currFrame = frames.get(updateIndex);
-		if (!currFrame.isIncomplete()) {
-			updateIndex++;
-			if (updateIndex < MAX_FRAMES)
+		if (!currFrame.isIncomplete() && !currFrame.isFinalFrame()) {
+			if (++updateIndex < MAX_FRAMES - 1)
 				frames.add(new Frame());
 			else
 				frames.add(new FinalFrame());
@@ -94,6 +93,24 @@ public class BowlingScore {
 		// Processes strike within the current frame
 		Frame currFrame = frames.get(updateIndex);
 		currFrame.scoreStrike();
+	}
+	
+	/**
+	 * Gets number of frames in the game so far.
+	 * 
+	 * @return Number of frames.
+	 */
+	public int getNumberOfFrames() {
+		return frames.size();
+	}
+	
+	/**
+	 * Determines whether game is at final frame or not.
+	 * 
+	 * @return True if game is at final frame, false otherwise.
+	 */
+	public boolean atFinalFrame() {
+		return frames.get(updateIndex).isFinalFrame();
 	}
 	
 	/**
