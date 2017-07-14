@@ -211,16 +211,201 @@ public class TestBowlingScore {
 	public void testStrikeEverything() {
 		BowlingScore game = new BowlingScore();
 		
-		// Nine regular frames of strikes, plus three strikes in final frame
-		for (int i = 1; i <= 12; i++) {
+		// One strike
+		game.processStrike();
+		assertEquals(10, game.calculateTotalScore());
+		assertEquals(1, game.getNumberOfFrames());
+		
+		// Second strike
+		game.processStrike();
+		assertEquals(30, game.calculateTotalScore());
+		assertEquals(2, game.getNumberOfFrames());
+		
+		// Third strike (turkey!)
+		game.processStrike();
+		assertEquals(60, game.calculateTotalScore());
+		assertEquals(3, game.getNumberOfFrames());
+		
+		// Seven more regular strikes
+		for (int i = 1; i <= 7; i++) {
 			game.processStrike();
+			assertEquals(60 + (30 * i), game.calculateTotalScore());
+			assertEquals(3 + i, game.getNumberOfFrames());
 		}
+		
+		// Final two bonus strikes
+		game.processStrike();
+		assertEquals(290, game.calculateTotalScore());
+		assertEquals(10, game.getNumberOfFrames());
+		game.processStrike();
 		assertEquals(300, game.calculateTotalScore());
 		assertEquals(10, game.getNumberOfFrames());
 		
 		// Throws error, since roll was processed with a completed final frame
 		try {
 			game.processStrike();
+			fail("A shot cannot be processed after final frame is completed!");
+		} catch (IllegalStateException e) {
+			// Success
+		}
+	}
+	
+	@Test
+	public void testSpareBeforeFinalFrameThenMiss() {
+		BowlingScore game = new BowlingScore();
+		
+		// Score 40 points within first 8 turns
+		for (int i = 1; i <= 8; i++) {
+			game.processNumber(5);
+			assertEquals(i * 5, game.calculateTotalScore());
+			assertEquals(i, game.getNumberOfFrames());
+			game.processMiss();
+			assertEquals(i * 5, game.calculateTotalScore());
+			assertEquals(i, game.getNumberOfFrames());
+		}
+		
+		// Score spare
+		game.processNumber(5);
+		game.processSpare();
+		assertEquals(50, game.calculateTotalScore());
+		assertEquals(9, game.getNumberOfFrames());
+		
+		// Follow up with miss in final frame
+		game.processMiss();
+		assertEquals(50, game.calculateTotalScore());
+		assertEquals(10, game.getNumberOfFrames());
+		
+		// Then regular shot
+		game.processNumber(2);
+		assertEquals(52, game.calculateTotalScore());
+		assertEquals(10, game.getNumberOfFrames());
+		
+		// Throws error, since roll was processed with a completed final frame
+		try {
+			game.processNumber(3);
+			fail("A shot cannot be processed after final frame is completed!");
+		} catch (IllegalStateException e) {
+			// Success
+		}
+	}
+	
+	@Test
+	public void testSpareBeforeFinalFrameThenStrike() {
+		BowlingScore game = new BowlingScore();
+		
+		// Score 40 points within first 8 turns
+		for (int i = 1; i <= 8; i++) {
+			game.processNumber(5);
+			assertEquals(i * 5, game.calculateTotalScore());
+			assertEquals(i, game.getNumberOfFrames());
+			game.processMiss();
+			assertEquals(i * 5, game.calculateTotalScore());
+			assertEquals(i, game.getNumberOfFrames());
+		}
+		
+		// Score spare
+		game.processNumber(5);
+		game.processSpare();
+		assertEquals(50, game.calculateTotalScore());
+		assertEquals(9, game.getNumberOfFrames());
+		
+		// Follow up with strike in final frame
+		game.processStrike();
+		assertEquals(70, game.calculateTotalScore());
+		assertEquals(10, game.getNumberOfFrames());
+		
+		// Then a miss and a spare in bonus frame
+		game.processMiss();
+		assertEquals(70, game.calculateTotalScore());
+		assertEquals(10, game.getNumberOfFrames());
+		game.processSpare();
+		assertEquals(80, game.calculateTotalScore());
+		assertEquals(10, game.getNumberOfFrames());
+		
+		// Throws error, since roll was processed with a completed final frame
+		try {
+			game.processNumber(3);
+			fail("A shot cannot be processed after final frame is completed!");
+		} catch (IllegalStateException e) {
+			// Success
+		}
+	}
+	
+	@Test
+	public void testStrikeBeforeFinalFrameThenMiss() {
+		BowlingScore game = new BowlingScore();
+		
+		// Score 40 points within first 8 turns
+		for (int i = 1; i <= 8; i++) {
+			game.processNumber(5);
+			assertEquals(i * 5, game.calculateTotalScore());
+			assertEquals(i, game.getNumberOfFrames());
+			game.processMiss();
+			assertEquals(i * 5, game.calculateTotalScore());
+			assertEquals(i, game.getNumberOfFrames());
+		}
+		
+		// Score strike
+		game.processStrike();
+		assertEquals(50, game.calculateTotalScore());
+		assertEquals(9, game.getNumberOfFrames());
+		
+		// Follow up with miss in final frame
+		game.processMiss();
+		assertEquals(50, game.calculateTotalScore());
+		assertEquals(10, game.getNumberOfFrames());
+		
+		// Then regular shot, which still has strike bonus from frame 9
+		game.processNumber(2);
+		assertEquals(54, game.calculateTotalScore());
+		assertEquals(10, game.getNumberOfFrames());
+		
+		// Throws error, since roll was processed with a completed final frame
+		try {
+			game.processNumber(3);
+			fail("A shot cannot be processed after final frame is completed!");
+		} catch (IllegalStateException e) {
+			// Success
+		}
+	}
+	
+	@Test
+	public void testStrikeBeforeFinalFrameThenSpare() {
+		BowlingScore game = new BowlingScore();
+		
+		// Score 40 points within first 8 turns
+		for (int i = 1; i <= 8; i++) {
+			game.processNumber(5);
+			assertEquals(i * 5, game.calculateTotalScore());
+			assertEquals(i, game.getNumberOfFrames());
+			game.processMiss();
+			assertEquals(i * 5, game.calculateTotalScore());
+			assertEquals(i, game.getNumberOfFrames());
+		}
+		
+		// Score strike
+		game.processStrike();
+		assertEquals(50, game.calculateTotalScore());
+		assertEquals(9, game.getNumberOfFrames());
+		
+		// Follow up with three points in final frame
+		game.processNumber(3);
+		assertEquals(56, game.calculateTotalScore());
+		assertEquals(10, game.getNumberOfFrames());
+		
+		// Then spare (seven more points)
+		game.processSpare();
+		assertEquals(70, game.calculateTotalScore());
+		assertEquals(10, game.getNumberOfFrames());
+		
+		// One more strike for good measure (spare won't apply bonus to this)
+		game.processStrike();
+		assertEquals(80, game.calculateTotalScore());
+		assertEquals(10, game.getNumberOfFrames());
+		
+		// Throws error, since roll was processed with a completed final frame
+		try {
+			game.processNumber(3);
 			fail("A shot cannot be processed after final frame is completed!");
 		} catch (IllegalStateException e) {
 			// Success

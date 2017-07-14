@@ -122,32 +122,25 @@ public class BowlingScore {
 	public int calculateTotalScore() {
 		int total = 0;
 		
-		// Injects frames from the master frame list (final frame has mini frames)
-		List<Frame> frameList = new ArrayList<Frame>();
-		for (Frame frame : frames)
-			frame.inject(frameList);
-		
 		// Iterate through the points of every frame and sum them up
-		for (int i = 0; i < frameList.size(); i++) {
-			Frame frame = frameList.get(i);
+		for (int i = 0; i < frames.size(); i++) {
+			Frame frame = frames.get(i);
 			int extra = 0;
 			
 			// Checks for potential spares and strikes
-			try {
-				if (frame.isSpare()) {
-					extra = frameList.get(i + 1).getPoints().get(0);
-				} else if (frame.isStrike()) {
-					// If next frame is also a strike, the following frame is also used
-					if (frameList.get(i + 1).isStrike()) {
-						extra += Frame.NUM_OF_PINS;	// For first frame after current
-						extra += frameList.get(i + 2).getPoints().get(0);
-					} else {
-						extra += frameList.get(i + 1).getPoints().get(0); // First point
-						extra += frameList.get(i + 1).getPoints().get(1); // Second point
-					}
-				}
-			} catch (IndexOutOfBoundsException e) {
-				// Means no more frames or points to pull extra points from
+			if (frame.isSpare()) {
+				if (i + 1 < frames.size())
+					extra += frame.getSpareBonus(frames.get(i + 1));
+			} else if (frame.isStrike()) {
+				List<Frame> nextFrames = new ArrayList<Frame>();
+				
+				// Adds up to two frames to the frame list to process
+				if (i + 1 < frames.size())
+					nextFrames.add(frames.get(i + 1));
+				if (i + 2 < frames.size())
+					nextFrames.add(frames.get(i + 2));
+				
+				extra += frame.getStrikeBonus(nextFrames);
 			}
 			
 			// Calculates points up to current frame

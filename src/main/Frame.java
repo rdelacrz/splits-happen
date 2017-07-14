@@ -110,12 +110,56 @@ public class Frame  {
 	}
 	
 	/**
+	 * Calculates bonus points obtained from next frame, assuming that the current
+	 * frame had a spare scored.
+	 * 
+	 * @param nextFrame - Next frame to apply spare bonus to.
+	 * @return Bonus points from spare.
+	 */
+	public int getSpareBonus(Frame nextFrame) {
+		if (isSpare() && nextFrame != null && nextFrame.getPoints().size() > 0)
+			return nextFrame.getPoints().get(0);
+		else
+			return 0;
+	}
+	
+	/**
+	 * Calculates bonus points obtained from next frames, assuming that the current
+	 * frame had a strike scored.
+	 * 
+	 * @param nextFrames - Next frames to apply spare bonus to.
+	 * @return Bonus points from strike.
+	 */
+	public int getStrikeBonus(List<Frame> nextFrames) {
+		if (isStrike() && nextFrames != null) {
+			int bonus = 0;
+			int rolls = 0;
+			
+			// Gets bonus points from first two rolls (while frames last)
+			for (Frame frame : nextFrames) {
+				for (Integer rollPoints : frame.getPoints()) {
+					bonus += rollPoints;
+					rolls += 1;
+					if (rolls >= 2)
+						break;
+				}
+				if (rolls >= 2)
+					break;
+			}
+			
+			return bonus;
+		} else {
+			return 0;
+		}
+	}
+	
+	/**
 	 * Gets number of bowling rolls to knock down pins (0 to 2).
 	 * 
 	 * @return Number of bowling attempts.
 	 */
 	public int getRolls() {
-		return points.size();
+		return getPoints().size();
 	}
 	
 	/**
@@ -128,101 +172,80 @@ public class Frame  {
 	}
 	
 	/**
-	 * Injects current frame object into given list.
-	 * 
-	 * @param frameList - List of frames to inject current frame into.
-	 * @throws IllegalStateException Frame list cannot be null.
-	 */
-	public void inject(List<Frame> frameList) throws IllegalStateException {
-		if (frameList == null)
-			throw new IllegalArgumentException("Frame list cannot be null!");
-		else
-			frameList.add(this);
-	}
-	
-	/**
-	 * Encapsulates code for final frame, which may have up to three mini-frames.
+	 * Encapsulates code for final frame, which may have up to two bonus frames.
 	 */
 	public static class FinalFrame extends Frame {
-		/** Mini frames associated with final frame - up to three. **/
-		private List<Frame> miniFrames;
+		/** Bonus frames associated with final frame - up to two. **/
+		private List<Frame> bonusFrames;
+		
+		/** New variable for final frame to determine whether frame is finished. **/
+		private boolean finished;
 		
 		/**
-		 * Initializes final frame with mini frames attached.
+		 * Initializes final frame with bonus frames attached.
 		 */
 		public FinalFrame() {
 			super();
-			
-			// Initializes mini frames
-			miniFrames = new ArrayList<Frame>();
-			miniFrames.add(new Frame());		// First frame
+			finished = false;
+			bonusFrames = new ArrayList<Frame>();
 		}
 		
 		/**
-		 * Checks for a spare within the first mini frame only.
+		 * Checks the status of the latest frame for completion.
 		 * 
-		 * @return True if a spare was scored in the first mini frame, false otherwise.
-		 */
-		@Override
-		public boolean isSpare() {
-			return miniFrames.get(0).isSpare();
-		}
-		
-		/**
-		 * Checks for a strike within the first mini frame only.
-		 * 
-		 * @return True if a strike was scored in the first mini frame, false otherwise.
-		 */
-		@Override
-		public boolean isStrike() {
-			return miniFrames.get(0).isStrike();
-		}
-		
-		/**
-		 * Checks the status of the latest mini frame for completion.
-		 * 
-		 * @return True if latest mini frame has any status other than INCOMPLETE,
+		 * @return True if latest frame (main or bonus frame) has any status other than INCOMPLETE,
 		 * false otherwise.
 		 */
-		private boolean isLatestMiniFrameComplete() {
-			return !miniFrames.get(miniFrames.size() - 1).isIncomplete();
+		private boolean isLatestFrameComplete() {
+			if (isIncomplete())
+				return false;
+			else
+				if (bonusFrames.size() == 0)
+					return true;
+				else
+					return !bonusFrames.get(bonusFrames.size() - 1).isIncomplete();
 		}
 		
 		/**
-		 * Checks whether the latest mini frame has no rolls at all.
+		 * Checks whether the latest bonus frame has no rolls at all.
 		 * 
-		 * @return True if latest mini frame has zero rolls, false otherwise.
+		 * @return True if latest bonus frame has zero rolls, false otherwise.
+		 * @throws IllegalStateException No bonus frames to check.
 		 */
-		private boolean isLatestMiniFrameEmpty() {
-			return miniFrames.get(miniFrames.size() - 1).points.isEmpty();
+		private boolean isLatestBonusFrameEmpty() throws IllegalStateException {
+			if (bonusFrames.size() == 0)
+				throw new IllegalStateException("There are no bonus frames to check!");
+			return bonusFrames.get(bonusFrames.size() - 1).points.isEmpty();
 		}
 		
 		/**
-		 * Checks the statuses of each of the mini frames and updates the overall status of 
-		 * the final frame. If any of the three conditions are met, the final frame status 
-		 * will be set to COMPLETE.
+		 * Checks the statuses of each of the frames and updates the overall finished status of 
+		 * the final frame. If any of the following conditions are met, the final frame's finished 
+		 * status will be set to true.
 		 * 
-		 * 1) The first mini frame has a status of COMPLETE (implying there is only one frame).
-		 * 2) The first mini frame has a status of SPARE or STRIKE, and the second mini frame
-		 * does NOT have a status of INCOMPLETE (implying there are only two frames).
-		 * 3) The first two mini frames have a status of STRIKE, and the third mini frame
-		 * does NOT have a status of INCOMPLETE (implying there are three frames).
+		 * 1) The final frame has a status of COMPLETE (implying there will be no bonus frames).
+		 * 2) The final frame has a status of SPARE and the first and only bonus frame does NOT 
+		 * have a status of INCOMPLETE (implying there will only be one bonus frame).
+		 * 3) The final frame has a status of STRIKE and the first and only bonus frame has a
+		 * non-INCOMPLETE status that is not a STRIKE (two strikes in a row would imply that there
+		 * will be a third roll, meaning the final frame isn't finished yet).
+		 * 4) The final frame and first bonus frame have a status of STRIKE, and the second bonus 
+		 * frame does NOT have a status of INCOMPLETE (implying there are now three rolls total).
 		 */
 		private void updateStatus() {
-			if (isIncomplete()) {
-				if (miniFrames.size() == 1) {
-					if (miniFrames.get(0).status == Status.COMPLETE)
-						super.status = Status.COMPLETE;
-				} else if (miniFrames.size() == 2) {
-					if (miniFrames.get(0).isStrike() && !miniFrames.get(1).isStrike() && isLatestMiniFrameComplete())
-						super.status = Status.COMPLETE;
-					else if (miniFrames.get(0).isSpare() && !isLatestMiniFrameEmpty()) {
-						super.status = Status.COMPLETE;		// Spare + one additional roll
+			if (!finished) {
+				if (bonusFrames.size() == 0) {
+					if (super.status == Status.COMPLETE)
+						finished = true;
+				} else if (bonusFrames.size() == 1) {
+					if (isStrike() && !bonusFrames.get(0).isStrike() && isLatestFrameComplete())
+						finished = true;
+					else if (isSpare() && !isLatestBonusFrameEmpty()) {
+						finished = true;	// Spare + one additional roll
 					}
-				} else if (miniFrames.size() == 3) {
-					if (miniFrames.get(0).isStrike() && miniFrames.get(1).isStrike()
-							&& !isLatestMiniFrameEmpty())
-						super.status = Status.COMPLETE;		// 2 strikes + one additional roll
+				} else if (bonusFrames.size() == 2) {
+					if (isStrike() && bonusFrames.get(0).isStrike() && !isLatestBonusFrameEmpty())
+						finished = true;	// 2 strikes + one additional roll
 				} else {
 					throw new IllegalStateException("The final frame cannot have more than three mini frames!");
 				}
@@ -230,13 +253,13 @@ public class Frame  {
 		}
 		
 		/**
-		 * Attempts to add new mini frame if the latest mini frame is COMPLETE, which will be used
-		 * for the next roll.
+		 * Attempts to add bonus frame if the current or latest bonus frame is COMPLETE, 
+		 * which will be used for the next roll.
 		 */
 		private void prepareNextFrame() {
 			updateStatus();
-			if (isIncomplete() && isLatestMiniFrameComplete())
-				miniFrames.add(new Frame());	// Creates new frame
+			if (!finished && isLatestFrameComplete())
+				bonusFrames.add(new Frame());	// Creates new frame
 		}
 		
 		/**
@@ -247,9 +270,13 @@ public class Frame  {
 		 */
 		@Override
 		public void scoreSpare() throws IllegalStateException {
-			if (isIncomplete()) {
-				Frame frame = miniFrames.get(miniFrames.size() - 1);
-				frame.scoreSpare();
+			if (!finished) {
+				if (isIncomplete())
+					super.scoreSpare();
+				else {
+					Frame frame = bonusFrames.get(bonusFrames.size() - 1);
+					frame.scoreSpare();
+				}
 				prepareNextFrame();
 			} else {
 				throw new IllegalStateException("A completed final frame cannot have additional rolls!");
@@ -264,9 +291,13 @@ public class Frame  {
 		 */
 		@Override
 		public void scoreStrike() {
-			if (isIncomplete()) {
-				Frame frame = miniFrames.get(miniFrames.size() - 1);
-				frame.scoreStrike();
+			if (!finished) {
+				if (isIncomplete())
+					super.scoreStrike();
+				else {
+					Frame frame = bonusFrames.get(bonusFrames.size() - 1);
+					frame.scoreStrike();
+				}
 				prepareNextFrame();
 			} else {
 				throw new IllegalStateException("A completed final frame cannot have additional rolls!");
@@ -281,9 +312,13 @@ public class Frame  {
 		 */
 		@Override
 		public void updateScore(int num) {
-			if (isIncomplete()) {
-				Frame frame = miniFrames.get(miniFrames.size() - 1);
-				frame.updateScore(num);
+			if (!finished) {
+				if (isIncomplete())
+					super.updateScore(num);
+				else {
+					Frame frame = bonusFrames.get(bonusFrames.size() - 1);
+					frame.updateScore(num);
+				}
 				prepareNextFrame();
 			} else {
 				throw new IllegalStateException("A completed final frame cannot have additional rolls!");
@@ -291,16 +326,39 @@ public class Frame  {
 		}
 		
 		/**
-		 * Gets number of bowling rolls to knock down pins (0 to 3).
+		 * Gets list of points scored within the current Frame, including bonus rolls.
 		 * 
-		 * @return Number of bowling attempts.
+		 * @return List of integer values scored.
 		 */
 		@Override
-		public int getRolls() {
-			int num = 0;
-			for (Frame miniFrame : miniFrames)
-				num += miniFrame.getRolls();
-			return num;
+		public List<Integer> getPoints() {
+			List<Integer> totalPoints = new ArrayList<Integer>();
+			totalPoints.addAll(super.getPoints());
+			for (Frame frame : bonusFrames)
+				totalPoints.addAll(frame.getPoints());
+			return totalPoints;
+		}
+		
+		/**
+		 * Final frame doesn't calculate bonus points from future frames.
+		 * 
+		 * @param nextFrame - Next frame to apply spare bonus to (will be ignored).
+		 * @return 0.
+		 */
+		@Override
+		public int getSpareBonus(Frame nextFrame) {
+			return 0;
+		}
+		
+		/**
+		 * Final frame doesn't calculate bonus points from future frames.
+		 * 
+		 * @param nextFrames - Next frame to apply strike bonus to (will be ignored).
+		 * @return 0.
+		 */
+		@Override
+		public int getStrikeBonus(List<Frame> nextFrames) {
+			return 0;
 		}
 		
 		/**
@@ -311,17 +369,6 @@ public class Frame  {
 		@Override
 		public boolean isFinalFrame() {
 			return true;
-		}
-		
-		/**
-		 * Injects mini frames into given list.
-		 * 
-		 * @param frameList - List of frames to inject mini frames into.
-		 */
-		@Override
-		public void inject(List<Frame> frameList) {
-			for (Frame frame : miniFrames)
-				frame.inject(frameList);
 		}
 	}
 }
